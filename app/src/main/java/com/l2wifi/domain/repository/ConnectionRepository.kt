@@ -1,15 +1,12 @@
-override suspend fun connect(account: Account): Flow<Result<Unit>> = flow {
-    try {
-        val response = nautaApi.login(...)
-        if (response.isSuccessful && response.body()?.success == true) {
-            // éxito
-        } else {
-            val errorMsg = response.body()?.message ?: "Credenciales incorrectas"
-            emit(Result.failure(Exception(errorMsg)))
-        }
-    } catch (e: IOException) {
-        emit(Result.failure(Exception("Error de red: ${e.message}")))
-    } catch (e: Exception) {
-        emit(Result.failure(e))
-    }
+package com.l2wifi.domain.repository
+
+import com.l2wifi.domain.model.Account
+import com.l2wifi.domain.model.Balance
+import kotlinx.coroutines.flow.Flow
+
+interface ConnectionRepository {
+    fun getActiveAccount(): Flow<Account?>
+    suspend fun connect(account: Account): Flow<Result<Unit>>
+    suspend fun disconnect()
+    suspend fun getBalance(account: Account): Balance?
 }
