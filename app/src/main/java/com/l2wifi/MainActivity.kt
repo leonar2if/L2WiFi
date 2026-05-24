@@ -1,3 +1,4 @@
+
 package com.l2wifi
 
 import android.Manifest
@@ -12,19 +13,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import com.l2wifi.ui.MainScreen
 import com.l2wifi.ui.theme.L2WiFiTheme
 import com.l2wifi.ui.theme.ThemeViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -50,37 +46,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Eventos para comunicar acciones del widget a la UI
-    companion object {
-        var pendingConnectAccountId: Long? = null
-        var pendingShowBalanceAccountId: Long? = null
-        var pendingLogout: Boolean = false
-        var pendingRefreshBalance: Boolean = false
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         checkAndRequestCallPermission()
-
-        // Procesar intents del widget
-        intent?.let {
-            when {
-                it.hasExtra("connect_account") -> {
-                    pendingConnectAccountId = it.getLongExtra("connect_account", -1L)
-                    if (pendingConnectAccountId == -1L) pendingConnectAccountId = null
-                }
-                it.hasExtra("show_balance") -> {
-                    pendingShowBalanceAccountId = it.getLongExtra("show_balance", -1L)
-                    if (pendingShowBalanceAccountId == -1L) pendingShowBalanceAccountId = null
-                }
-                it.hasExtra("logout") -> {
-                    pendingLogout = true
-                }
-                it.hasExtra("refresh_balance") -> {
-                    pendingRefreshBalance = true
-                }
-            }
-        }
 
         setContent {
             val themeViewModel: ThemeViewModel = hiltViewModel()
@@ -90,21 +58,10 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen(
-                        initialConnectAccountId = pendingConnectAccountId,
-                        initialShowBalanceAccountId = pendingShowBalanceAccountId,
-                        initialLogout = pendingLogout,
-                        initialRefreshBalance = pendingRefreshBalance
-                    )
+                    MainScreen()
                 }
             }
         }
-
-        // Limpiar eventos después de procesarlos
-        pendingConnectAccountId = null
-        pendingShowBalanceAccountId = null
-        pendingLogout = false
-        pendingRefreshBalance = false
     }
 }
 
