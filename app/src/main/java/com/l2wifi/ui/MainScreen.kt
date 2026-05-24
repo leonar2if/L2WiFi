@@ -37,6 +37,7 @@ fun MainScreen() {
                     containerColor = Color(0xFF1A1F26),
                     tonalElevation = 0.dp
                 ) {
+                    // Tab 1: Casa (izquierda)
                     NavigationBarItem(
                         selected = currentRoute == "casa",
                         onClick = { navController.navigate("casa") { popUpTo("casa") { inclusive = false } } },
@@ -46,6 +47,8 @@ fun MainScreen() {
                             unselectedIconColor = Color.White
                         )
                     )
+                    
+                    // Tab 2: WiFi (centro)
                     NavigationBarItem(
                         selected = currentRoute == "wifi",
                         onClick = { navController.navigate("wifi") { popUpTo("wifi") { inclusive = false } } },
@@ -55,10 +58,18 @@ fun MainScreen() {
                             unselectedIconColor = Color.White
                         )
                     )
+                    
+                    // Tab 3: Billete (derecha) - icono de peso cubano
                     NavigationBarItem(
                         selected = currentRoute == "billete",
                         onClick = { navController.navigate("billete") { popUpTo("billete") { inclusive = false } } },
-                        icon = { Icon(Icons.Filled.AttachMoney, contentDescription = "Billete") },
+                        icon = { 
+                            Text(
+                                text = "₱",
+                                fontSize = 24.sp,
+                                color = if (currentRoute == "billete") Color(0xFF00FFCC) else Color.White
+                            )
+                        },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = Color(0xFF00FFCC),
                             unselectedIconColor = Color.White
@@ -83,6 +94,7 @@ fun MainScreen() {
                 HomeScreen(navController)
             }
             composable("billete") {
+                // Pantalla de recargas (a futuro)
                 PantallaBillete()
             }
             composable("settings") {
