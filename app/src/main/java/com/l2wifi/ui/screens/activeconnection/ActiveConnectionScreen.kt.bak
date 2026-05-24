@@ -1,0 +1,106 @@
+package com.l2wifi.ui.screens.activeconnection
+
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.l2wifi.ui.components.PremiumButton
+import com.l2wifi.ui.components.TimerRing
+import com.l2wifi.util.formatTime
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ActiveConnectionScreen(
+    navController: NavController,
+    accountId: Long,
+    viewModel: ActiveConnectionViewModel = hiltViewModel()
+) {
+    val scope = rememberCoroutineScope()
+    val uiState by viewModel.uiState.collectAsState()
+    val remainingSeconds by viewModel.remainingSeconds.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
+    LaunchedEffect(errorMessage) {
+        if (errorMessage.isNotBlank()) {
+            snackbarHostState.showSnackbar(errorMessage)
+            viewModel.clearError()
+        }
+    }
+    LaunchedEffect(accountId) {
+        if (accountId == -1L) {
+            navController.popBackStack()
+        } else {
+            viewModel.loadAccount(accountId)
+        }
+    }
+
+    val progress by animateFloatAsState(
+        targetValue = if (uiState.remainingTime > 0) {
+            (remainingSeconds.toFloat() / uiState.remainingTime.toFloat()).coerceIn(0f, 1f)
+        } else 0f,
+        animationSpec = tween(300)
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(uiState.accountName, color = Color.White) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding).background(
+            Brush.verticalGradient(listOf(Color(0xFF0B0F14), Color(0xFF001F2A)))
+        )) {
+            Box(modifier = Modifier.matchParentSize().background(Color.Cyan.copy(alpha = 0.05f)).blur(30.dp))
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF00FFCC))
+            } else {
+                Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceBetween) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    TimerRing(progress = progress, modifier = Modifier.size(220.dp), color = Color(0xFF00FFCC))
+                    Text(text = formatTime(remainingSeconds), fontSize = 48.sp, fontFamily = FontFamily.Monospace, color = Color.White, letterSpacing = 4.sp)
+                    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f))) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Saldo restante: ${uiState.balance} ${uiState.currency}", color = Color.White)
+                            Text("Usuario: ${uiState.username}", color = Color.White.copy(alpha = 0.7f))
+                            Text("Estado: Conectado", color = Color(0xFF00FFCC))
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        PremiumButton(text = "Cerrar sesión", onClick = {
+                            scope.launch {
+                                if (viewModel.logout(accountId)) navController.popBackStack()
+                                else snackbarHostState.showSnackbar("Error al cerrar sesión")
+                            }
+                        }, modifier = Modifier.weight(1f), gradient = Brush.horizontalGradient(listOf(Color(0xFFFF4D4D), Color(0xFFFF6B6B))))
+                        PremiumButton(text = "Actualizar", onClick = { viewModel.refreshStatus() }, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}

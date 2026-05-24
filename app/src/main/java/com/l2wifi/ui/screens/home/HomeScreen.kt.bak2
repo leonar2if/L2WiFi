@@ -1,0 +1,207 @@
+package com.l2wifi.ui.screens.home
+
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.l2wifi.domain.model.Account
+import com.l2wifi.domain.model.ConnectionState
+import com.l2wifi.ui.components.*
+import com.l2wifi.ui.screens.addaccount.AddAccountBottomSheet
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    navController: NavController,
+    viewModel: HomeViewModel = hiltViewModel()
+) {
+    val accounts by viewModel.accounts.collectAsState()
+    val activeAccount by viewModel.activeAccount.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val scope = rememberCoroutineScope()
+    var showAddSheet by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            PremiumTopBar(
+                title = "WIFI",
+                onSettingsClick = { navController.navigate("settings") },
+                onAboutClick = { navController.navigate("about") },
+                onNautaClick = { navController.navigate("profile") }
+            )
+        },
+        floatingActionButton = {
+            AnimatedFAB(
+                onAddClick = { showAddSheet = true },
+                onRefreshClick = { viewModel.refreshAccounts() }
+            )
+        },
+        floatingActionButtonPosition = FabPosition.End
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            if (isLoading) {
+                LoadingOverlay()
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(accounts) { account ->
+                        AccountCard(
+                            account = account,
+                            isActive = activeAccount?.id == account.id,
+                            onConnect = { viewModel.connect(account) },
+                            onCheckBalance = { viewModel.checkBalance(account) },
+                            onEnter = {
+                                if (account.state == ConnectionState.ACTIVE) {
+                                    navController.navigate("activeConnection/${account.id}")
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showAddSheet) {
+        AddAccountBottomSheet(
+            onDismiss = { showAddSheet = false },
+            onSave = { name, username, password ->
+                viewModel.addAccount(name, username, password)
+                showAddSheet = false
+            }
+        )
+    }
+}
+
+@Composable
+fun AccountCard(
+    account: Account,
+    isActive: Boolean,
+    onConnect: () -> Unit,
+    onCheckBalance: () -> Unit,
+    onEnter: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1A1F26)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Lado izquierdo: Avatar + información de la cuenta
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Avatar circular
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color.Cyan, Color.Blue)
+                            )
+                        )
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                // Nombre y usuario
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = account.name,
+                        color = Color.White,
+                        fontSize = MaterialTheme.typography.titleLarge.fontSize,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = account.username,
+                        color = Color.Gray,
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            
+            // Lado derecho: Botones/íconos según estado
+            if (isActive) {
+                // Cuenta activa: botón "Activa >"
+                Button(
+                    onClick = onEnter,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF00C853),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(30.dp),
+                    modifier = Modifier
+                ) {
+                    Text("Activa >")
+                }
+            } else {
+                // Cuenta NO activa: íconos Wi-Fi y $
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onConnect,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Wifi,
+                            contentDescription = "Conectar",
+                            tint = Color(0xFF00FFCC)
+                        )
+                    }
+                    IconButton(
+                        onClick = onCheckBalance,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AttachMoney,
+                            contentDescription = "Saldo",
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
