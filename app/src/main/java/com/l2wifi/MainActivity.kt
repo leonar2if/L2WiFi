@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
@@ -48,7 +49,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         checkAndRequestCallPermission()
 
-        // Crear el ViewModel manualmente con su fábrica (evita el crash de Hilt)
         val dataStore = SettingsDataStore(applicationContext)
         val themeViewModel = ViewModelProvider(
             this,
@@ -56,7 +56,8 @@ class MainActivity : ComponentActivity() {
         ).get(ThemeViewModel::class.java)
 
         setContent {
-            val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
+            val themeModeState = themeViewModel.themeMode.collectAsStateWithLifecycle()
+            val themeMode = themeModeState.value
             L2WiFiDynamicTheme(themeMode = themeMode) {
                 val navController = rememberNavController()
                 Surface(
