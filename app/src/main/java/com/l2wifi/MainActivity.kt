@@ -11,11 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.rememberNavController
 import com.l2wifi.data.local.datastore.SettingsDataStore
 import com.l2wifi.ui.MainScreen
 import com.l2wifi.ui.theme.L2WiFiTheme
@@ -58,11 +58,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
             L2WiFiDynamicTheme(themeMode = themeMode) {
+                val navController = rememberNavController()
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen()
+                    MainScreen(navController = navController)
                 }
             }
         }
