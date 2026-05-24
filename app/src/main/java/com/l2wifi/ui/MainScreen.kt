@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -24,8 +25,7 @@ import com.l2wifi.ui.screens.splash.SplashScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
-    val navController = rememberNavController()
+fun MainScreen(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     
@@ -61,7 +61,7 @@ fun MainScreen() {
                         onClick = { navController.navigate("billete") { popUpTo("billete") { inclusive = false } } },
                         icon = { 
                             Text(
-                                text = "₱",
+                                text = "₽",
                                 fontSize = 20.sp,
                                 color = if (currentRoute == "billete") Color(0xFF00FFCC) else Color.White
                             )
