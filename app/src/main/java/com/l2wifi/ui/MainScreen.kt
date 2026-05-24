@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -37,7 +38,6 @@ fun MainScreen() {
                     containerColor = Color(0xFF1A1F26),
                     tonalElevation = 0.dp
                 ) {
-                    // Tab 1: Casa (izquierda)
                     NavigationBarItem(
                         selected = currentRoute == "casa",
                         onClick = { navController.navigate("casa") { popUpTo("casa") { inclusive = false } } },
@@ -47,8 +47,6 @@ fun MainScreen() {
                             unselectedIconColor = Color.White
                         )
                     )
-                    
-                    // Tab 2: WiFi (centro)
                     NavigationBarItem(
                         selected = currentRoute == "wifi",
                         onClick = { navController.navigate("wifi") { popUpTo("wifi") { inclusive = false } } },
@@ -58,15 +56,13 @@ fun MainScreen() {
                             unselectedIconColor = Color.White
                         )
                     )
-                    
-                    // Tab 3: Billete (derecha) - icono de peso cubano
                     NavigationBarItem(
                         selected = currentRoute == "billete",
                         onClick = { navController.navigate("billete") { popUpTo("billete") { inclusive = false } } },
                         icon = { 
                             Text(
                                 text = "₱",
-                                fontSize = 24.sp,
+                                fontSize = 20.sp,
                                 color = if (currentRoute == "billete") Color(0xFF00FFCC) else Color.White
                             )
                         },
@@ -94,7 +90,6 @@ fun MainScreen() {
                 HomeScreen(navController)
             }
             composable("billete") {
-                // Pantalla de recargas (a futuro)
                 PantallaBillete()
             }
             composable("settings") {
