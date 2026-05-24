@@ -1,0 +1,11 @@
+<resources>
+    <style name="Theme.L2WiFi" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="Theme.L2WiFi.Splash" parent="Theme.L2WiFi">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
+</resources>
