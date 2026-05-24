@@ -1,17 +1,26 @@
 package com.l2wifi.ui.components.dialogs
 
+import android.app.KeyguardManager
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.l2wifi.domain.model.Account
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,11 +31,55 @@ fun EditarCuentaDialog(
     onSave: (name: String, username: String, password: String) -> Unit,
     onDelete: () -> Unit
 ) {
+    val context = LocalContext.current
     var name by remember(account) { mutableStateOf(account.name) }
     var username by remember(account) { mutableStateOf(account.username) }
     var password by remember(account) { mutableStateOf(account.password) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
-    
+    var passwordVisible by remember { mutableStateOf(false) }
+    var pendingToggleVisible by remember { mutableStateOf(false) } // para saber si se pidió mostrar
+
+    // Launcher para la pantalla de autenticación del sistema (PIN, patrón o huella)
+    val authLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            // Autenticación exitosa → mostrar contraseña
+            passwordVisible = true
+        }
+        pendingToggleVisible = false
+    }
+
+    fun requestAuthenticationToShowPassword() {
+        val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        if (keyguardManager.isDeviceSecure) {
+            val intent = keyguardManager.createConfirmDeviceCredentialIntent(
+                "Autenticación requerida",
+                "Usa tu PIN, patrón o huella para ver la contraseña"
+            )
+            if (intent != null) {
+                pendingToggleVisible = true
+                authLauncher.launch(intent)
+            } else {
+                // Si no se puede crear el intent, mostramos directamente (fallback)
+                passwordVisible = true
+            }
+        } else {
+            // El dispositivo no tiene seguridad configurada, mostramos sin autenticar (o podrías mostrar un mensaje)
+            passwordVisible = true
+        }
+    }
+
+    fun togglePasswordVisibility() {
+        if (passwordVisible) {
+            // Si ya visible, simplemente ocultar
+            passwordVisible = false
+        } else {
+            // Si oculta, pedir autenticación antes de mostrar
+            requestAuthenticationToShowPassword()
+        }
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -49,7 +102,6 @@ fun EditarCuentaDialog(
                     .fillMaxWidth()
                     .padding(24.dp)
             ) {
-                // Header con título y botón eliminar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -106,13 +158,23 @@ fun EditarCuentaDialog(
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
-                // Campo Contraseña
+                // Campo Contraseña con autenticación en el ojo
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
                     label = { Text("Contraseña") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { togglePasswordVisibility() }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña",
+                                tint = Color(0xFF00FFCC)
+                            )
+                        }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF00FFCC),
                         unfocusedBorderColor = Color.Gray,
