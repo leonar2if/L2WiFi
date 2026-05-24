@@ -39,6 +39,7 @@ fun HomeScreen(
     val accounts by viewModel.accounts.collectAsState()
     val activeAccount by viewModel.activeAccount.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
     val scope = rememberCoroutineScope()
     var showAddSheet by remember { mutableStateOf(false) }
     
@@ -51,6 +52,14 @@ fun HomeScreen(
     var isReordering by remember { mutableStateOf(false) }
     var currentItems by remember { mutableStateOf(accounts) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Mostrar errores del ViewModel en Snackbar
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearError()
+        }
+    }
 
     LaunchedEffect(accounts, isReordering) {
         if (!isReordering) currentItems = accounts
@@ -257,7 +266,11 @@ fun AccountCardReordering(
                             Icon(Icons.Filled.Wifi, contentDescription = "Conectar", tint = Color(0xFF00FFCC))
                         }
                         IconButton(onClick = onCheckBalance, modifier = Modifier.size(48.dp)) {
-                            Icon(Icons.Filled.AttachMoney, contentDescription = "Saldo",                            tint = Color(0xFF00FFCC)
+                            Icon(
+                                Icons.Filled.AttachMoney,
+                                contentDescription = "Saldo",
+                                tint = Color(0xFF00FFCC)  // Mismo color que el wifi
+                            )
                         }
                     }
                 }
