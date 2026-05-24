@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,11 +20,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.l2wifi.domain.model.Account
-import com.l2wifi.domain.model.ConnectionState
 import com.l2wifi.ui.components.*
 import com.l2wifi.ui.components.dialogs.EditarCuentaDialog
 import com.l2wifi.ui.components.dialogs.RecargaDialog
@@ -56,7 +53,7 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(accounts, isReordering) {
-    }
+        if (!isReordering) currentItems = accounts
     }
 
     Scaffold(
