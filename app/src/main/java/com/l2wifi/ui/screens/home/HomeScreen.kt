@@ -257,7 +257,7 @@ fun AccountCardReordering(
                             Icon(Icons.Filled.Wifi, contentDescription = "Conectar", tint = Color(0xFF00FFCC))
                         }
                         IconButton(onClick = onCheckBalance, modifier = Modifier.size(48.dp)) {
-                            Icon(Icons.Filled.AttachMoney, contentDescription = "Saldo", tint = Color.White)
+                            Icon(Icons.Filled.AttachMoney, contentDescription = "Saldo",                            tint = Color(0xFF00FFCC)
                         }
                     }
                 }
