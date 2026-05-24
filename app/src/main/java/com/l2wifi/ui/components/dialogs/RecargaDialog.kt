@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.l2wifi.ui.components.InfoTooltip
 import com.l2wifi.util.UssdManager
 
@@ -25,7 +27,7 @@ fun RecargaDialog(onDismiss: () -> Unit) {
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(
+        properties = DialogProperties(
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false
         )
@@ -83,8 +85,7 @@ fun RecargaDialog(onDismiss: () -> Unit) {
                                     expanded = false
                                 },
                                 colors = DropdownMenuItemDefaults.colors(
-                                    focusedTextColor = Color(0xFF00FFCC),
-                                    focusedContainerColor = Color(0xFF2A2F3A)
+                                    focusedTextColor = Color(0xFF00FFCC)
                                 )
                             )
                         }
