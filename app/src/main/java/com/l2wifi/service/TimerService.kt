@@ -13,13 +13,6 @@ class TimerService : Service() {
     private var accountName = ""
     private lateinit var prefs: SharedPreferences
 
-    companion object {
-        const val ACTION_TICK = "com.l2wifi.ACTION_TICK"
-        const val EXTRA_TIME = "EXTRA_TIME"
-        private const val PREFS_NAME = "timer_prefs"
-        private const val KEY_REMAINING_TIME = "remaining_time"
-    }
-
     override fun onCreate() {
         super.onCreate()
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -69,6 +62,11 @@ class TimerService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        const val ACTION_TICK = "com.l2wifi.ACTION_TICK"
+        const val EXTRA_TIME = "EXTRA_TIME"
+        private const val PREFS_NAME = "timer_prefs"
+        private const val KEY_REMAINING_TIME = "remaining_time"
+
         fun getLastRemainingTime(context: Context): Long {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             return prefs.getLong(KEY_REMAINING_TIME, 0L)
