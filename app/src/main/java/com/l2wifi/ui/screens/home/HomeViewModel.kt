@@ -26,6 +26,9 @@ class HomeViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
     init {
         loadAccountsOnce()
         observeActiveSession()
@@ -51,42 +54,88 @@ class HomeViewModel @Inject constructor(
 
     fun connect(account: Account) {
         viewModelScope.launch {
-            connectionRepository.connect(account).collect { result ->
-                if (result.isSuccess) {
-                    refreshAccounts()
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                connectionRepository.connect(account).collect { result ->
+                    if (result.isSuccess) {
+                        refreshAccounts()
+                        _errorMessage.value = null
+                    } else {
+                        _errorMessage.value = result.exceptionOrNull()?.message ?: "Error al conectar"
+                    }
                 }
+            } catch (e: Exception) {
+                _errorMessage.value = "Error de conexión: ${e.message}"
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
     fun checkBalance(account: Account, onResult: (String) -> Unit) {
         viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
             try {
                 val balance = connectionRepository.getBalance(account)
                 if (balance != null) {
                     val horas = balance.remainingTime / 3600
                     val minutos = (balance.remainingTime % 3600) / 60
-                    onResult("Saldo: ${balance.remainingMoney} ${balance.currency}\nTiempo restante: ${horas}h ${minutos}m")
+                    val segundos = balance.remainingTime % 60
+                    onResult("Saldo: ${balance.remainingMoney} ${balance.currency}\nTiempo restante: ${horas}h ${minutos}m ${segundos}s")
                 } else {
                     onResult("No se pudo obtener el saldo. Verifica tu conexión.")
                 }
             } catch (e: Exception) {
+                _errorMessage.value = "Error al consultar saldo: ${e.message}"
                 onResult("Error: ${e.message}")
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
     fun addAccount(name: String, username: String, password: String) {
         viewModelScope.launch {
-            val newAccount = Account(
-                id = 0,
-                name = name,
-                username = username,
-                password = password,
-                state = ConnectionState.INACTIVE
-            )
-            accountRepository.insertAccount(newAccount)
-            refreshAccounts()
+            try {
+                val newAccount = Account(
+                    id = 0,
+                    name = name,
+                    username = username,
+                    password = password,
+                    state = ConnectionState.INACTIVE
+                )
+                accountRepository.insertAccount(newAccount)
+                refreshAccounts()
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al añadir cuenta: ${e.message}"
+            }
+        }
+    }
+
+    fun updateAccount(account: Account) {
+        viewModelScope.launch {
+            try {
+                accountRepository.updateAccount(account)
+                refreshAccounts()
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al actualizar cuenta: ${e.message}"
+            }
+        }
+    }
+
+    fun deleteAccount(account: Account) {
+        viewModelScope.launch {
+            try {
+                accountRepository.deleteAccount(account)
+                refreshAccounts()
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al eliminar cuenta: ${e.message}"
+            }
         }
     }
 
@@ -96,28 +145,23 @@ class HomeViewModel @Inject constructor(
                 val updatedList = accountRepository.getAllAccounts().firstOrNull() ?: emptyList()
                 _accounts.value = updatedList
             } catch (e: Exception) {
-                // mantener el valor actual
+                _errorMessage.value = "Error al actualizar cuentas: ${e.message}"
             }
-        }
-    }
-
-    fun updateAccount(account: Account) {
-        viewModelScope.launch {
-            accountRepository.updateAccount(account)
-            refreshAccounts()
-        }
-    }
-
-    fun deleteAccount(account: Account) {
-        viewModelScope.launch {
-            accountRepository.deleteAccount(account)
-            refreshAccounts()
         }
     }
 
     fun updateAccountsOrder(accounts: List<Account>) {
         viewModelScope.launch {
-            accountRepository.updateAccountsOrder(accounts)
+            try {
+                accountRepository.updateAccountsOrder(accounts)
+                _errorMessage.value = null
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al guardar orden: ${e.message}"
+            }
         }
+    }
+
+    fun clearError() {
+        _errorMessage.value = null
     }
 }
