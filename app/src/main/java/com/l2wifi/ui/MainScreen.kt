@@ -23,12 +23,7 @@ import com.l2wifi.ui.screens.splash.SplashScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(
-    initialConnectAccountId: Long? = null,
-    initialShowBalanceAccountId: Long? = null,
-    initialLogout: Boolean = false,
-    initialRefreshBalance: Boolean = false
-) {
+fun MainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -76,23 +71,6 @@ fun MainScreen(
         NavHost(
             navController = navController,
             startDestination = "splash",
-        // Procesar acciones iniciales del widget
-        LaunchedEffect(Unit) {
-            if (initialLogout) {
-                // Cerrar sesión activa
-                val connectionRepository: com.l2wifi.domain.repository.ConnectionRepository = androidx.hilt.navigation.compose.hiltViewModel()
-                connectionRepository.disconnect()
-            }
-            if (initialRefreshBalance) {
-                // Refrescar saldo de cuenta activa
-            }
-            if (initialConnectAccountId != null && initialConnectAccountId != -1L) {
-                navController.navigate("activeConnection/${initialConnectAccountId}")
-            }
-            if (initialShowBalanceAccountId != null && initialShowBalanceAccountId != -1L) {
-                // Mostrar diálogo de saldo (se puede implementar con un evento)
-            }
-        }
             modifier = Modifier.padding(paddingValues)
         ) {
             composable("splash") {
