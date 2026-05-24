@@ -9,7 +9,8 @@ object WidgetDatabaseHelper {
     fun getAccounts(context: Context): List<AccountEntity> {
         val db = AppDatabase.getInstance(context.applicationContext)
         return runBlocking {
-            db.accountDao().getAll().firstOrNull() ?: emptyList()
+            val flow = db.accountDao().getAll()
+            flow.firstOrNull() ?: emptyList()
         }
     }
 
