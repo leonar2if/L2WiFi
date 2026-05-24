@@ -83,10 +83,7 @@ fun RecargaDialog(onDismiss: () -> Unit) {
                                 onClick = {
                                     bancoSeleccionado = banco
                                     expanded = false
-                                },
-                                colors = DropdownMenuItemDefaults.colors(
-                                    focusedTextColor = Color(0xFF00FFCC)
-                                )
+                                }
                             )
                         }
                     }
