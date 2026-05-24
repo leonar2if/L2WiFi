@@ -236,7 +236,7 @@ fun AccountCard(
                         Icon(
                             imageVector = Icons.Default.AttachMoney,
                             contentDescription = "Saldo",
-                            tint = Color.White
+                                                        tint = Color(0xFF00FFCC),
                         )
                     }
                 }
