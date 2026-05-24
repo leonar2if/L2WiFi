@@ -1,4 +1,3 @@
-
 package com.l2wifi
 
 import android.Manifest
@@ -15,14 +14,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.l2wifi.data.local.datastore.SettingsDataStore
 import com.l2wifi.ui.MainScreen
 import com.l2wifi.ui.theme.L2WiFiTheme
 import com.l2wifi.ui.theme.ThemeViewModel
-import dagger.hilt.android.AndroidEntryPoint
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -50,8 +48,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         checkAndRequestCallPermission()
 
+        // Crear el ViewModel manualmente con su fábrica (evita el crash de Hilt)
+        val dataStore = SettingsDataStore(applicationContext)
+        val themeViewModel = ViewModelProvider(
+            this,
+            ThemeViewModel.Factory(dataStore)
+        ).get(ThemeViewModel::class.java)
+
         setContent {
-            val themeViewModel: ThemeViewModel = hiltViewModel()
             val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
             L2WiFiDynamicTheme(themeMode = themeMode) {
                 Surface(
