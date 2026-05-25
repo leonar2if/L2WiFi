@@ -21,7 +21,9 @@ import com.l2wifi.data.local.datastore.SettingsDataStore
 import com.l2wifi.ui.MainScreen
 import com.l2wifi.ui.theme.L2WiFiTheme
 import com.l2wifi.ui.theme.ThemeViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint  // ← ESTO ES LO QUE FALTABA
 class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher = registerForActivityResult(
