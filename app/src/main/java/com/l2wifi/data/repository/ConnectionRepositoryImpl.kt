@@ -2,8 +2,6 @@ package com.l2wifi.data.repository
 
 import android.content.Context
 import android.net.wifi.WifiManager
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.l2wifi.data.local.dao.ActiveSessionDao
 import com.l2wifi.data.local.entity.ActiveSessionEntity
 import com.l2wifi.data.remote.api.NautaApiService
@@ -12,6 +10,8 @@ import com.l2wifi.domain.model.Balance
 import com.l2wifi.domain.model.ConnectionState
 import com.l2wifi.domain.repository.AccountRepository
 import com.l2wifi.domain.repository.ConnectionRepository
+import com.l2wifi.service.TimerService
+import com.l2wifi.widget.WidgetSync
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -39,26 +39,25 @@ class ConnectionRepositoryImpl @Inject constructor(
 
     override suspend fun connect(account: Account): Flow<Result<Unit>> = flow {
         try {
-            // Validar credenciales no estén vacías
             if (account.username.isEmpty() || account.password.isEmpty()) {
                 emit(Result.failure(Exception("Usuario y contraseña son requeridos")))
                 return@flow
             }
 
-            // Obtener la IP local para el portal de autenticación
             val userIp = getLocalIpAddress() ?: "0.0.0.0"
-            
-            // Intentar conectar con la API de Nauta
             val response = nautaApi.login(account.username, account.password, userIp)
-            
+
             if (response.isSuccessful && response.body()?.success == true) {
-                // Guardar sesión activa localmente
-                activeSessionDao.deleteAll() // Limpiar sesiones anteriores
+                activeSessionDao.deleteAll()
                 activeSessionDao.insert(ActiveSessionEntity(accountId = account.id))
                 accountRepository.updateAccount(account.copy(state = ConnectionState.ACTIVE))
+
+                TimerService.saveRemainingTime(context, response.body()?.remainingTime ?: 0L)
+                WidgetSync.requestUpdate(context)
+
                 emit(Result.success(Unit))
             } else {
-                val errorMsg = response.body()?.message 
+                val errorMsg = response.body()?.message
                     ?: "Credenciales incorrectas o servidor no disponible"
                 emit(Result.failure(Exception(errorMsg)))
             }
@@ -73,7 +72,6 @@ class ConnectionRepositoryImpl @Inject constructor(
         try {
             val logoutResponse = nautaApi.logout()
             if (logoutResponse.isSuccessful && logoutResponse.body()?.success == true) {
-                // Limpiar sesión local
                 val session = activeSessionDao.getActive()
                 session?.let {
                     val activeAccount = accountRepository.getAccountById(it.accountId)
@@ -86,6 +84,8 @@ class ConnectionRepositoryImpl @Inject constructor(
             // Si falla el logout remoto, igual limpiamos local
         } finally {
             activeSessionDao.deleteAll()
+            TimerService.clearRemainingTime(context)
+            WidgetSync.requestUpdate(context)
         }
     }
 
@@ -113,12 +113,12 @@ class ConnectionRepositoryImpl @Inject constructor(
             for (networkInterface in interfaces) {
                 if (!networkInterface.isUp) continue
                 if (networkInterface.isLoopback) continue
-                
+
                 val addresses = networkInterface.inetAddresses
                 for (address in addresses) {
                     if (address is InetAddress && !address.isLoopbackAddress) {
                         val ip = address.hostAddress
-                        if (ip != null && !ip.contains(":")) { // Excluir IPv6
+                        if (ip != null && !ip.contains(":")) {
                             return ip
                         }
                     }

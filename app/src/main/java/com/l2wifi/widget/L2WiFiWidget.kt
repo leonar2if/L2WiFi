@@ -5,66 +5,38 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Typeface
 import android.widget.RemoteViews
 import com.l2wifi.MainActivity
 import com.l2wifi.R
 import com.l2wifi.service.TimerService
+import com.l2wifi.util.WidgetAction
+import com.l2wifi.util.WidgetActionContract
 
 class L2WiFiWidget : AppWidgetProvider() {
-
-    companion object {
-        private const val PREFS_NAME = "widget_prefs"
-        private const val KEY_CURRENT_INDEX = "current_account_index"
-    }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         when (intent.action) {
-            TimerService.ACTION_TICK -> {
-                val time = intent.getLongExtra(TimerService.EXTRA_TIME, 0L)
-                saveRemainingTime(context, time)
+            TimerService.ACTION_TICK,
+            WidgetSync.ACTION_UPDATE_WIDGETS,
+            AppWidgetManager.ACTION_APPWIDGET_UPDATE -> {
                 updateAllWidgets(context, AppWidgetManager.getInstance(context))
             }
-            "NEXT_ACCOUNT" -> {
-                val current = getCurrentIndex(context)
-                val accounts = WidgetDatabaseHelper.getAccounts(context)
-                if (accounts.isNotEmpty()) {
-                    val newIndex = (current + 1) % accounts.size
-                    saveCurrentIndex(context, newIndex)
-                    updateAllWidgets(context, AppWidgetManager.getInstance(context))
-                }
-            }
-            "PREV_ACCOUNT" -> {
-                val current = getCurrentIndex(context)
-                val accounts = WidgetDatabaseHelper.getAccounts(context)
-                if (accounts.isNotEmpty()) {
-                    val newIndex = if (current - 1 < 0) accounts.size - 1 else current - 1
-                    saveCurrentIndex(context, newIndex)
-                    updateAllWidgets(context, AppWidgetManager.getInstance(context))
-                }
-            }
-            "ACTION_CONNECT" -> {
-                val accountId = intent.getLongExtra("account_id", -1L)
-                openAppAndConnect(context, accountId)
-            }
-            "ACTION_BALANCE" -> {
-                val accountId = intent.getLongExtra("account_id", -1L)
-                openAppAndShowBalance(context, accountId)
-            }
-            "ACTION_LOGOUT" -> {
-                openAppAndLogout(context)
-            }
-            "ACTION_REFRESH" -> {
-                openAppAndRefresh(context)
-            }
+            "ACTION_CONNECT" -> openApp(context, WidgetAction.Connect(intent.getLongExtra("account_id", -1L)))
+            "ACTION_BALANCE" -> openApp(context, WidgetAction.Balance(intent.getLongExtra("account_id", -1L)))
+            "ACTION_LOGOUT" -> openApp(context, WidgetAction.Logout(intent.getLongExtra("account_id", -1L)))
+            "ACTION_REFRESH" -> openApp(context, WidgetAction.Refresh(intent.getLongExtra("account_id", -1L)))
         }
     }
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        for (appWidgetId in appWidgetIds) {
-            updateWidget(context, appWidgetManager, appWidgetId)
-        }
+        updateAllWidgets(context, appWidgetManager)
     }
 
     private fun updateAllWidgets(context: Context, manager: AppWidgetManager) {
@@ -76,71 +48,122 @@ class L2WiFiWidget : AppWidgetProvider() {
     }
 
     private fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
-        val accounts = WidgetDatabaseHelper.getAccounts(context)
-        val currentIndex = getCurrentIndex(context)
-        val account = if (accounts.isNotEmpty()) accounts[currentIndex.coerceIn(0 until accounts.size)] else null
+        val account = WidgetDatabaseHelper.getDisplayAccount(context)
         val activeAccountId = WidgetDatabaseHelper.getActiveAccountId(context)
-        val isActive = activeAccountId != null && account != null && activeAccountId == account.id
-        val remainingTime = if (isActive) getRemainingTime(context) else 0L
+        val isConnected = activeAccountId != null
+        val remainingTime = if (isConnected) TimerService.getLastRemainingTime(context) else 0L
 
         val views = RemoteViews(context.packageName, R.layout.widget_layout).apply {
-            if (account != null) {
-                setTextViewText(R.id.widget_account_name, account.name)
-            } else {
-                setTextViewText(R.id.widget_account_name, "Sin cuentas")
-            }
+            setTextViewText(R.id.widget_account_name, account?.name ?: "Sin cuentas")
+            setTextViewText(R.id.widget_remaining_time, formatWidgetTime(remainingTime))
+            setViewVisibility(R.id.widget_account_name, if (isConnected) android.view.View.GONE else android.view.View.VISIBLE)
+            setViewVisibility(R.id.widget_remaining_time, if (isConnected) android.view.View.VISIBLE else android.view.View.GONE)
 
-            if (isActive && remainingTime > 0) {
-                setTextViewText(R.id.widget_remaining_time, formatTime(remainingTime))
-                setTextViewText(R.id.widget_connect, "Cerrar sesión")
-                setTextViewText(R.id.widget_balance, "Actualizar")
-                setOnClickPendingIntent(R.id.widget_connect, getLogoutPendingIntent(context))
-                setOnClickPendingIntent(R.id.widget_balance, getRefreshPendingIntent(context))
+            if (isConnected) {
+                setImageViewBitmap(R.id.widget_connect, createLogoutBitmap(context))
+                setImageViewBitmap(R.id.widget_balance, createRefreshBitmap(context))
+                if (activeAccountId != null) {
+                    setOnClickPendingIntent(R.id.widget_connect, getLogoutPendingIntent(context, activeAccountId))
+                    setOnClickPendingIntent(R.id.widget_balance, getRefreshPendingIntent(context, activeAccountId))
+                }
             } else {
-                setTextViewText(R.id.widget_remaining_time, if (remainingTime > 0) formatTime(remainingTime) else "--:--:--")
-                setTextViewText(R.id.widget_connect, "Conectar")
-                setTextViewText(R.id.widget_balance, "Saldo")
+                setImageViewBitmap(R.id.widget_connect, createWifiBitmap(context))
+                setImageViewBitmap(R.id.widget_balance, createDollarBitmap(context))
                 if (account != null) {
                     setOnClickPendingIntent(R.id.widget_connect, getConnectPendingIntent(context, account.id))
                     setOnClickPendingIntent(R.id.widget_balance, getBalancePendingIntent(context, account.id))
                 }
             }
-
-            // Botones de navegación
-            setOnClickPendingIntent(R.id.widget_prev, getPrevPendingIntent(context))
-            setOnClickPendingIntent(R.id.widget_next, getNextPendingIntent(context))
         }
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
-    // --- Persistencia ---
-    private fun getCurrentIndex(context: Context): Int {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getInt(KEY_CURRENT_INDEX, 0)
+    private fun formatWidgetTime(seconds: Long): String {
+        val safe = seconds.coerceAtLeast(0L)
+        val hours = safe / 3600
+        val minutes = (safe % 3600) / 60
+        val secs = safe % 60
+        return if (hours > 0) {
+            String.format("%d:%02d:%02d", hours, minutes, secs)
+        } else {
+            String.format("%d:%02d", minutes, secs)
+        }
     }
 
-    private fun saveCurrentIndex(context: Context, index: Int) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putInt(KEY_CURRENT_INDEX, index).apply()
+    private fun bitmapSize(context: Context): Int = (24 * context.resources.displayMetrics.density).toInt().coerceAtLeast(48)
+
+    private fun createWifiBitmap(context: Context): Bitmap {
+        val size = bitmapSize(context)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = size * 0.08f
+            strokeCap = Paint.Cap.ROUND
+        }
+        val center = size / 2f
+        val padding = size * 0.16f
+        val step = size * 0.15f
+        val rect1 = RectF(padding, padding, size - padding, size - padding)
+        val rect2 = RectF(padding + step, padding + step, size - padding - step, size - padding - step)
+        val rect3 = RectF(padding + step * 2, padding + step * 2, size - padding - step * 2, size - padding - step * 2)
+        canvas.drawArc(rect1, 200f, 140f, false, paint)
+        canvas.drawArc(rect2, 200f, 140f, false, paint)
+        canvas.drawArc(rect3, 200f, 140f, false, paint)
+        paint.style = Paint.Style.FILL
+        canvas.drawCircle(center, size * 0.78f, size * 0.07f, paint)
+        return bitmap
     }
 
-    private fun saveRemainingTime(context: Context, time: Long) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putLong("remaining_time", time).apply()
+    private fun createDollarBitmap(context: Context): Bitmap {
+        val size = bitmapSize(context)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textAlign = Paint.Align.CENTER
+            textSize = size * 0.82f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+        canvas.drawText("$", size / 2f, size * 0.77f, paint)
+        return bitmap
     }
 
-    private fun getRemainingTime(context: Context): Long {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getLong("remaining_time", 0L)
+    private fun createLogoutBitmap(context: Context): Bitmap {
+        val size = bitmapSize(context)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = size * 0.09f
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+        val mid = size * 0.56f
+        canvas.drawLine(size * 0.25f, mid, size * 0.72f, mid, paint)
+        canvas.drawLine(size * 0.52f, size * 0.33f, size * 0.72f, mid, paint)
+        canvas.drawLine(size * 0.52f, size * 0.67f, size * 0.72f, mid, paint)
+        return bitmap
     }
 
-    // --- PendingIntents ---
-    private fun getPrevPendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, L2WiFiWidget::class.java).apply { action = "PREV_ACCOUNT" }
-        return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-    }
-
-    private fun getNextPendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, L2WiFiWidget::class.java).apply { action = "NEXT_ACCOUNT" }
-        return PendingIntent.getBroadcast(context, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    private fun createRefreshBitmap(context: Context): Bitmap {
+        val size = bitmapSize(context)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = size * 0.09f
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+        val rect = RectF(size * 0.18f, size * 0.18f, size * 0.82f, size * 0.82f)
+        canvas.drawArc(rect, 35f, 300f, false, paint)
+        canvas.drawLine(size * 0.78f, size * 0.28f, size * 0.84f, size * 0.42f, paint)
+        canvas.drawLine(size * 0.78f, size * 0.28f, size * 0.64f, size * 0.30f, paint)
+        return bitmap
     }
 
     private fun getConnectPendingIntent(context: Context, accountId: Long): PendingIntent {
@@ -159,53 +182,27 @@ class L2WiFiWidget : AppWidgetProvider() {
         return PendingIntent.getBroadcast(context, 3, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
-    private fun getLogoutPendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, L2WiFiWidget::class.java).apply { action = "ACTION_LOGOUT" }
+    private fun getLogoutPendingIntent(context: Context, accountId: Long): PendingIntent {
+        val intent = Intent(context, L2WiFiWidget::class.java).apply {
+            action = "ACTION_LOGOUT"
+            putExtra("account_id", accountId)
+        }
         return PendingIntent.getBroadcast(context, 4, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
-    private fun getRefreshPendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, L2WiFiWidget::class.java).apply { action = "ACTION_REFRESH" }
+    private fun getRefreshPendingIntent(context: Context, accountId: Long): PendingIntent {
+        val intent = Intent(context, L2WiFiWidget::class.java).apply {
+            action = "ACTION_REFRESH"
+            putExtra("account_id", accountId)
+        }
         return PendingIntent.getBroadcast(context, 5, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
-    // --- Acciones que abren la app ---
-    private fun openAppAndConnect(context: Context, accountId: Long) {
+    private fun openApp(context: Context, action: WidgetAction) {
         val intent = Intent(context, MainActivity::class.java).apply {
-            putExtra("connect_account", accountId)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
+        WidgetActionContract.toIntent(intent, action)
         context.startActivity(intent)
-    }
-
-    private fun openAppAndShowBalance(context: Context, accountId: Long) {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            putExtra("show_balance", accountId)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        context.startActivity(intent)
-    }
-
-    private fun openAppAndLogout(context: Context) {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            putExtra("logout", true)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        context.startActivity(intent)
-    }
-
-    private fun openAppAndRefresh(context: Context) {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            putExtra("refresh_balance", true)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        context.startActivity(intent)
-    }
-
-    private fun formatTime(seconds: Long): String {
-        val h = seconds / 3600
-        val m = (seconds % 3600) / 60
-        val s = seconds % 60
-        return String.format("%02d:%02d:%02d", h, m, s)
     }
 }

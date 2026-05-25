@@ -9,25 +9,24 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import kotlin.math.cos
-import kotlin.math.sin
 
 @Composable
 fun TimerRing(
-    progress: Float, // 0f..1f
+    progress: Float,
     modifier: Modifier = Modifier,
     size: Int = 200,
     strokeWidth: Float = 8f,
     color: Color = Color.Cyan
 ) {
-    val infiniteTransition = rememberInfiniteTransition()
+    val infiniteTransition = rememberInfiniteTransition(label = "timerRing")
     val glowAlpha by infiniteTransition.animateFloat(
         initialValue = 0.3f,
         targetValue = 0.8f,
         animationSpec = infiniteRepeatable(
             animation = tween(1000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
-        )
+        ),
+        label = "glowAlpha"
     )
 
     Canvas(modifier = modifier.size(size.dp)) {
@@ -35,14 +34,12 @@ fun TimerRing(
         val radius = size / 2f - strokeWidth / 2
         val sweepAngle = progress * 360f
 
-        // Glow
         drawCircle(
             color = color.copy(alpha = glowAlpha),
             radius = radius + 6f,
             center = center,
             style = Stroke(width = strokeWidth + 2f, cap = StrokeCap.Round)
         )
-        // Main arc
         drawArc(
             color = color,
             startAngle = -90f,

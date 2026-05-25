@@ -4,79 +4,61 @@
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:orientation="vertical"
-    android:padding="12dp"
-    android:gravity="center">
+    android:padding="10dp"
+    android:gravity="center_horizontal">
 
-    <!-- Fila de navegación: flecha izquierda, nombre, flecha derecha -->
-    <LinearLayout
+    <TextView
+        android:id="@+id/widget_account_name"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="Cuenta"
+        android:textColor="#0F1D2D"
+        android:textSize="15sp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-medium" />
 
-        <ImageButton
-            android:id="@+id/widget_prev"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@android:drawable/ic_media_previous"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Anterior" />
-
-        <TextView
-            android:id="@+id/widget_account_name"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Cuenta"
-            android:textColor="#FFFFFF"
-            android:textSize="14sp"
-            android:gravity="center"
-            android:fontFamily="sans-serif-medium" />
-
-        <ImageButton
-            android:id="@+id/widget_next"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@android:drawable/ic_media_next"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Siguiente" />
-    </LinearLayout>
-
-    <!-- Tiempo restante -->
     <TextView
         android:id="@+id/widget_remaining_time"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="--:--:--"
-        android:textColor="#00FFCC"
-        android:textSize="18sp"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="0:00"
+        android:textColor="#0F1D2D"
+        android:textSize="22sp"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:fontFamily="monospace"
-        android:layout_marginTop="8dp" />
+        android:visibility="gone" />
 
-    <!-- Botones de acción -->
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:orientation="horizontal"
-        android:layout_marginTop="12dp">
+        android:gravity="center"
+        android:weightSum="2">
 
-        <Button
+        <ImageButton
             android:id="@+id/widget_connect"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Conectar"
-            android:backgroundTint="#00FFCC"
-            android:textColor="#0B0F14"
-            android:textSize="12sp" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:scaleType="center"
+            android:contentDescription="Acción izquierda" />
 
-        <Button
+        <ImageButton
             android:id="@+id/widget_balance"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Saldo"
-            android:backgroundTint="#0099FF"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:layout_marginStart="8dp" />
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:scaleType="center"
+            android:contentDescription="Acción derecha" />
     </LinearLayout>
+
 </LinearLayout>

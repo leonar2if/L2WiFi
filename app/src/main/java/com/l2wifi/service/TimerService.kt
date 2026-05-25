@@ -23,21 +23,23 @@ class TimerService : Service() {
         accountName = intent?.getStringExtra("ACCOUNT_NAME") ?: "L2 WiFi"
 
         if (remainingSeconds <= 0) {
+            clearRemainingTime(this)
             stopSelf()
             return START_NOT_STICKY
         }
 
-        // Guardar tiempo inicial
-        prefs.edit().putLong(KEY_REMAINING_TIME, remainingSeconds).apply()
-
-        startForeground(TimerNotification.NOTIFICATION_ID, TimerNotification.createNotification(this, accountName, remainingSeconds))
+        saveRemainingTime(this, remainingSeconds)
+        startForeground(
+            TimerNotification.NOTIFICATION_ID,
+            TimerNotification.createNotification(this, accountName, remainingSeconds)
+        )
 
         job?.cancel()
         job = CoroutineScope(Dispatchers.Default).launch {
             while (remainingSeconds > 0) {
                 delay(1000)
                 remainingSeconds--
-                prefs.edit().putLong(KEY_REMAINING_TIME, remainingSeconds).apply()
+                saveRemainingTime(this@TimerService, remainingSeconds)
 
                 val tickIntent = Intent(ACTION_TICK).apply {
                     putExtra(EXTRA_TIME, remainingSeconds)
@@ -45,10 +47,12 @@ class TimerService : Service() {
                 sendBroadcast(tickIntent)
 
                 val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
-                manager.notify(TimerNotification.NOTIFICATION_ID, TimerNotification.createNotification(this@TimerService, accountName, remainingSeconds))
+                manager.notify(
+                    TimerNotification.NOTIFICATION_ID,
+                    TimerNotification.createNotification(this@TimerService, accountName, remainingSeconds)
+                )
             }
-            // Al llegar a cero, limpiar prefs y detener
-            prefs.edit().remove(KEY_REMAINING_TIME).apply()
+            clearRemainingTime(this@TimerService)
             stopSelf()
         }
         return START_STICKY
@@ -70,6 +74,20 @@ class TimerService : Service() {
         fun getLastRemainingTime(context: Context): Long {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             return prefs.getLong(KEY_REMAINING_TIME, 0L)
+        }
+
+        fun saveRemainingTime(context: Context, seconds: Long) {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putLong(KEY_REMAINING_TIME, seconds)
+                .apply()
+        }
+
+        fun clearRemainingTime(context: Context) {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .remove(KEY_REMAINING_TIME)
+                .apply()
         }
     }
 }

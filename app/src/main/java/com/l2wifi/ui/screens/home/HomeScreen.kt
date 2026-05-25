@@ -1,6 +1,7 @@
 package com.l2wifi.ui.screens.home
 
-import androidx.compose.animation.*
+import android.widget.Toast
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,32 +30,33 @@ import com.l2wifi.ui.components.dialogs.EditarCuentaDialog
 import com.l2wifi.ui.components.dialogs.RecargaDialog
 import com.l2wifi.ui.components.dialogs.SaldoDialog
 import com.l2wifi.ui.screens.addaccount.AddAccountBottomSheet
+import com.l2wifi.util.WidgetAction
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
+    pendingWidgetAction: WidgetAction? = null,
+    onWidgetActionConsumed: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val accounts by viewModel.accounts.collectAsState()
     val activeAccount by viewModel.activeAccount.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val scope = rememberCoroutineScope()
     var showAddSheet by remember { mutableStateOf(false) }
-    
     var showSaldoDialog by remember { mutableStateOf(false) }
     var showRecargaDialog by remember { mutableStateOf(false) }
     var showEditarDialog by remember { mutableStateOf(false) }
     var selectedAccountForBalance by remember { mutableStateOf<Account?>(null) }
     var selectedAccountForEdit by remember { mutableStateOf<Account?>(null) }
-    
     var isReordering by remember { mutableStateOf(false) }
     var currentItems by remember { mutableStateOf(accounts) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Mostrar errores del ViewModel en Snackbar
     LaunchedEffect(errorMessage) {
         errorMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
@@ -63,6 +66,28 @@ fun HomeScreen(
 
     LaunchedEffect(accounts, isReordering) {
         if (!isReordering) currentItems = accounts
+    }
+
+    LaunchedEffect(pendingWidgetAction, accounts) {
+        when (val action = pendingWidgetAction) {
+            is WidgetAction.Connect -> {
+                val account = accounts.firstOrNull { it.id == action.accountId }
+                if (account != null) {
+                    Toast.makeText(context, "Conectando…", Toast.LENGTH_SHORT).show()
+                    viewModel.connect(account)
+                    onWidgetActionConsumed()
+                }
+            }
+            is WidgetAction.Balance -> {
+                val account = accounts.firstOrNull { it.id == action.accountId }
+                if (account != null) {
+                    selectedAccountForBalance = account
+                    showSaldoDialog = true
+                    onWidgetActionConsumed()
+                }
+            }
+            else -> Unit
+        }
     }
 
     Scaffold(
@@ -86,8 +111,9 @@ fun HomeScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            if (isLoading) LoadingOverlay()
-            else {
+            if (isLoading) {
+                LoadingOverlay()
+            } else {
                 LazyColumn(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -106,7 +132,9 @@ fun HomeScreen(
                                 showSaldoDialog = true
                             },
                             onEnter = {
-                                if (activeAccount?.id == account.id) navController.navigate("activeConnection/${account.id}")
+                                if (activeAccount?.id == account.id) {
+                                    navController.navigate("activeConnection/${account.id}")
+                                }
                             },
                             onEdit = {
                                 selectedAccountForEdit = account
@@ -155,7 +183,6 @@ fun HomeScreen(
         }
     }
 
-    // Diálogo de saldo
     if (showSaldoDialog && selectedAccountForBalance != null) {
         SaldoDialog(
             onDismiss = { showSaldoDialog = false; selectedAccountForBalance = null },
@@ -167,9 +194,10 @@ fun HomeScreen(
             onRecargar = { showRecargaDialog = true }
         )
     }
-    if (showRecargaDialog) RecargaDialog(onDismiss = { showRecargaDialog = false })
-    
-    // Diálogo de edición
+    if (showRecargaDialog) {
+        RecargaDialog(onDismiss = { showRecargaDialog = false })
+    }
+
     selectedAccountForEdit?.let { account ->
         EditarCuentaDialog(
             account = account,
@@ -188,7 +216,7 @@ fun HomeScreen(
             }
         )
     }
-    
+
     if (showAddSheet) {
         AddAccountBottomSheet(
             onDismiss = { showAddSheet = false },
@@ -212,15 +240,18 @@ fun AccountCardReordering(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit
 ) {
+    val cardColor = if (isReordering && isActive) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize()
-            .shadow(if (isReordering) 8.dp else 4.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isReordering && isActive) Color(0xFF2A3F3A) else Color(0xFF1A1F26)
-        ),
+            .shadow(if (isReordering) 8.dp else 4.dp, RoundedCornerShape(18.dp)),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
@@ -232,10 +263,10 @@ fun AccountCardReordering(
                 if (isReordering) {
                     Column {
                         IconButton(onClick = onMoveUp, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Subir", tint = Color.White)
+                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Subir", tint = MaterialTheme.colorScheme.onSurface)
                         }
                         IconButton(onClick = onMoveDown, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Bajar", tint = Color.White)
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Bajar", tint = MaterialTheme.colorScheme.onSurface)
                         }
                     }
                     Spacer(modifier = Modifier.width(8.dp))
@@ -244,32 +275,51 @@ fun AccountCardReordering(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(Brush.horizontalGradient(listOf(Color.Cyan, Color.Blue)))
+                        .background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)))
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(
                     modifier = if (!isReordering) Modifier.weight(1f).clickable { onEdit() }.padding(4.dp)
                     else Modifier.weight(1f)
                 ) {
-                    Text(account.name, color = Color.White, fontSize = MaterialTheme.typography.titleLarge.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(account.username, color = Color.Gray, fontSize = MaterialTheme.typography.bodySmall.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        account.name,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = MaterialTheme.typography.titleLarge.fontSize,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        account.username,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
             if (!isReordering) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (isActive) {
-                        Button(onClick = onEnter, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853), contentColor = Color.White), shape = RoundedCornerShape(30.dp)) {
+                        Button(
+                            onClick = onEnter,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(30.dp)
+                        ) {
                             Text("Activa >")
                         }
                     } else {
                         IconButton(onClick = onConnect, modifier = Modifier.size(48.dp)) {
-                            Icon(Icons.Filled.Wifi, contentDescription = "Conectar", tint = Color(0xFF00FFCC))
+                            Icon(Icons.Filled.Wifi, contentDescription = "Conectar", tint = Color.White)
                         }
                         IconButton(onClick = onCheckBalance, modifier = Modifier.size(48.dp)) {
                             Icon(
                                 Icons.Filled.AttachMoney,
                                 contentDescription = "Saldo",
-                                tint = Color(0xFF00FFCC)  // Mismo color que el wifi
+                                tint = Color.White
                             )
                         }
                     }

@@ -7,7 +7,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="L2 WiFi"
-        android:textColor="#00FFCC"
+        android:textColor="#0F1D2D"
         android:layout_gravity="center"
         android:textSize="16sp" />
 </FrameLayout>

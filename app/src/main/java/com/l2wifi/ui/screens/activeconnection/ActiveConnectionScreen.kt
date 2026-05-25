@@ -2,7 +2,8 @@ package com.l2wifi.ui.screens.activeconnection
 
 import android.content.Intent
 import android.os.Build
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,13 +23,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.l2wifi.service.TimerService
 import com.l2wifi.ui.components.TimerRing
-import com.l2wifi.util.formatTime
+import com.l2wifi.util.WidgetAction
 import kotlinx.coroutines.launch
 
 @Composable
 fun ActiveConnectionScreen(
     navController: NavController,
     accountId: Long,
+    pendingWidgetAction: WidgetAction? = null,
+    onWidgetActionConsumed: () -> Unit = {},
     viewModel: ActiveConnectionViewModel = hiltViewModel()
 ) {
     val scope = rememberCoroutineScope()
@@ -39,6 +42,28 @@ fun ActiveConnectionScreen(
 
     LaunchedEffect(accountId) {
         viewModel.loadAccount(accountId)
+    }
+
+    LaunchedEffect(pendingWidgetAction) {
+        when (pendingWidgetAction) {
+            is WidgetAction.Logout -> {
+                if (pendingWidgetAction.accountId == accountId) {
+                    val success = viewModel.logout(accountId)
+                    if (success) {
+                        context.stopService(Intent(context, TimerService::class.java))
+                        navController.popBackStack()
+                    }
+                    onWidgetActionConsumed()
+                }
+            }
+            is WidgetAction.Refresh -> {
+                if (pendingWidgetAction.accountId == accountId) {
+                    viewModel.refreshStatus()
+                    onWidgetActionConsumed()
+                }
+            }
+            else -> Unit
+        }
     }
 
     LaunchedEffect(startServiceEvent) {
@@ -57,22 +82,24 @@ fun ActiveConnectionScreen(
     }
 
     val totalTime = 3600f
-    val progress by animateFloatAsState(targetValue = remainingSeconds / totalTime, animationSpec = tween(300))
+    val progress by animateFloatAsState(
+        targetValue = (remainingSeconds / totalTime).coerceIn(0f, 1f),
+        animationSpec = tween(300),
+        label = "timerProgress"
+    )
 
     Column(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Tiempo inicial (total)
         Text(
-            text = "Total: ${formatTime(totalTime.toLong())}",
+            text = "Total: 01:00:00",
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Círculo de progreso con tiempo restante dentro
         Box(contentAlignment = Alignment.Center) {
             TimerRing(
                 progress = progress,
@@ -80,7 +107,7 @@ fun ActiveConnectionScreen(
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = formatTime(remainingSeconds),
+                text = String.format("%d:%02d", remainingSeconds / 60, remainingSeconds % 60),
                 fontSize = 40.sp,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurface
@@ -89,7 +116,6 @@ fun ActiveConnectionScreen(
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        // Botones Cerrar sesión y Actualizar
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(24.dp)
@@ -114,7 +140,7 @@ fun ActiveConnectionScreen(
 
             Button(
                 onClick = { scope.launch { viewModel.refreshStatus() } },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(30.dp),
                 modifier = Modifier.weight(1f)
             ) {

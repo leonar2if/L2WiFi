@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,7 +16,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.l2wifi.ui.theme.GlowCyan
 
 @Composable
 fun PremiumButton(
@@ -23,7 +23,7 @@ fun PremiumButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    gradient: Brush = Brush.horizontalGradient(listOf(GlowCyan, Color(0xFF0099FF)))
+    gradient: Brush? = null
 ) {
     var buttonScale by remember { mutableStateOf(1f) }
     val scaleAnim by animateFloatAsState(
@@ -31,7 +31,11 @@ fun PremiumButton(
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioLowBouncy,
             stiffness = Spring.StiffnessMedium
-        )
+        ),
+        label = "buttonScale"
+    )
+    val fill = gradient ?: Brush.horizontalGradient(
+        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
     )
 
     Button(
@@ -53,7 +57,7 @@ fun PremiumButton(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(gradient, shape = RoundedCornerShape(30.dp))
+                .background(fill, shape = RoundedCornerShape(30.dp))
                 .padding(horizontal = 24.dp, vertical = 12.dp),
             contentAlignment = Alignment.Center
         ) {

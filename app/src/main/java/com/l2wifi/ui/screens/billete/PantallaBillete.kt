@@ -6,7 +6,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -21,7 +20,7 @@ fun PantallaBillete() {
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF1A1F26)
+                containerColor = MaterialTheme.colorScheme.surface
             )
         ) {
             Column(
@@ -31,19 +30,20 @@ fun PantallaBillete() {
                 Text(
                     text = "₱",
                     fontSize = 64.sp,
-                    color = Color(0xFF00FFCC)
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Recargas con tarjeta",
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Esta funcionalidad estará disponible próximamente.\nPuedes recargar desde el portal Nauta o con código USSD.",
+                    text = "Esta funcionalidad estará disponible próximamente.
+Puedes recargar desde el portal Nauta o con código USSD.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
         }

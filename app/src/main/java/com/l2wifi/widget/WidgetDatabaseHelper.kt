@@ -3,8 +3,8 @@ package com.l2wifi.widget
 import android.content.Context
 import com.l2wifi.data.local.database.AppDatabase
 import com.l2wifi.data.local.entity.AccountEntity
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.runBlocking
 
 object WidgetDatabaseHelper {
     fun getAccounts(context: Context): List<AccountEntity> {
@@ -26,5 +26,14 @@ object WidgetDatabaseHelper {
         return runBlocking {
             db.accountDao().getById(id)
         }
+    }
+
+    fun getDisplayAccount(context: Context): AccountEntity? {
+        val activeId = getActiveAccountId(context)
+        if (activeId != null) {
+            val activeAccount = getAccountById(context, activeId)
+            if (activeAccount != null) return activeAccount
+        }
+        return getAccounts(context).firstOrNull()
     }
 }

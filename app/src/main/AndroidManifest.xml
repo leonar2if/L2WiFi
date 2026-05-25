@@ -6,8 +6,8 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
-     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <application
         android:name=".L2WiFiApplication"
         android:allowBackup="true"
@@ -17,10 +17,11 @@
         android:theme="@style/Theme.L2WiFi"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
-        
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.L2WiFi.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -38,6 +39,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.l2wifi.widget.ACTION_UPDATE_WIDGETS" />
+                <action android:name="com.l2wifi.ACTION_TICK" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

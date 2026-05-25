@@ -9,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -38,7 +37,7 @@ fun RecargaDialog(onDismiss: () -> Unit) {
                 .wrapContentHeight(),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF1A1F26)
+                containerColor = MaterialTheme.colorScheme.surface
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
@@ -51,12 +50,11 @@ fun RecargaDialog(onDismiss: () -> Unit) {
                 Text(
                     text = "Recargar saldo",
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Dropdown selector de banco
                 ExposedDropdownMenuBox(
                     expanded = expanded,
                     onExpandedChange = { expanded = !expanded }
@@ -68,9 +66,12 @@ fun RecargaDialog(onDismiss: () -> Unit) {
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF00FFCC),
-                            unfocusedBorderColor = Color.Gray,
-                            focusedLabelColor = Color(0xFF00FFCC)
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                     )
                     ExposedDropdownMenu(
@@ -79,7 +80,7 @@ fun RecargaDialog(onDismiss: () -> Unit) {
                     ) {
                         bancos.forEach { banco ->
                             DropdownMenuItem(
-                                text = { Text(banco, color = Color.White) },
+                                text = { Text(banco, color = MaterialTheme.colorScheme.onSurface) },
                                 onClick = {
                                     bancoSeleccionado = banco
                                     expanded = false
@@ -91,7 +92,6 @@ fun RecargaDialog(onDismiss: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Botón Autenticar con tooltip
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -103,20 +103,19 @@ fun RecargaDialog(onDismiss: () -> Unit) {
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(30.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF00FFCC),
-                            contentColor = Color(0xFF0B0F14)
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = Color.White
                         )
                     ) {
                         Text("Autenticar")
                     }
                     InfoTooltip(text = "Se le solicitará su PIN en una ventana del sistema") {
-                        Icon(Icons.Default.Info, contentDescription = "Info Autenticar", tint = Color(0xFF00FFCC))
+                        Icon(Icons.Default.Info, contentDescription = "Info Autenticar", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Botón Recargar Nauta con tooltip
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -127,14 +126,14 @@ fun RecargaDialog(onDismiss: () -> Unit) {
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(30.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF0099FF),
-                            contentColor = Color.White
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            contentColor = MaterialTheme.colorScheme.onSecondary
                         )
                     ) {
                         Text("Recargar Nauta")
                     }
                     InfoTooltip(text = "Siga los pasos a continuación para completar su recarga") {
-                        Icon(Icons.Default.Info, contentDescription = "Info Recargar", tint = Color(0xFF0099FF))
+                        Icon(Icons.Default.Info, contentDescription = "Info Recargar", tint = MaterialTheme.colorScheme.secondary)
                     }
                 }
 
@@ -145,8 +144,8 @@ fun RecargaDialog(onDismiss: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(0.6f),
                     shape = RoundedCornerShape(30.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF00FFCC),
-                        contentColor = Color(0xFF0B0F14)
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White
                     )
                 ) {
                     Text("Cerrar")

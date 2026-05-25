@@ -1,6 +1,7 @@
 package com.l2wifi
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
@@ -12,6 +13,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -20,6 +23,8 @@ import androidx.navigation.compose.rememberNavController
 import com.l2wifi.ui.MainScreen
 import com.l2wifi.ui.theme.L2WiFiTheme
 import com.l2wifi.ui.theme.ThemeViewModel
+import com.l2wifi.util.WidgetAction
+import com.l2wifi.util.WidgetActionContract
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -37,31 +42,39 @@ class MainActivity : ComponentActivity() {
 
     private fun checkAndRequestCallPermission() {
         when {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED -> {
-                // Permiso ya concedido
-            }
-            else -> {
-                requestPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
-            }
+            ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED -> Unit
+            else -> requestPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
         }
     }
+
+    private val pendingWidgetActionState = mutableStateOf<WidgetAction?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         checkAndRequestCallPermission()
+        pendingWidgetActionState.value = WidgetActionContract.fromIntent(intent)
 
         setContent {
-            // ThemeViewModel se inyecta automáticamente por Hilt en el Composable
             L2WiFiDynamicTheme {
                 val navController = rememberNavController()
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen(navController = navController)
+                    MainScreen(
+                        navController = navController,
+                        pendingWidgetAction = pendingWidgetActionState.value,
+                        onWidgetActionConsumed = { pendingWidgetActionState.value = null }
+                    )
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingWidgetActionState.value = WidgetActionContract.fromIntent(intent)
     }
 }
 
@@ -72,7 +85,7 @@ fun L2WiFiDynamicTheme(
     val themeViewModel: ThemeViewModel = hiltViewModel()
     val themeModeState = themeViewModel.themeMode.collectAsStateWithLifecycle()
     val themeMode = themeModeState.value
-    
+
     val context = androidx.compose.ui.platform.LocalContext.current
     val isSystemDark = when (themeMode) {
         1 -> false

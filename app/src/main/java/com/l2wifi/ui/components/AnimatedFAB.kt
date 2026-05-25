@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,7 +18,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.l2wifi.ui.theme.GlowCyan
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -26,6 +26,8 @@ fun AnimatedFAB(
     onRefreshClick: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
 
     Box(
         modifier = Modifier
@@ -33,13 +35,12 @@ fun AnimatedFAB(
             .padding(16.dp),
         contentAlignment = Alignment.BottomEnd
     ) {
-        // Botón principal: "+"
         IconButton(
             onClick = { expanded = !expanded },
             modifier = Modifier
                 .size(56.dp)
                 .background(
-                    brush = Brush.radialGradient(listOf(GlowCyan, Color(0xFF0099FF))),
+                    brush = Brush.radialGradient(listOf(primary, secondary)),
                     shape = CircleShape
                 )
                 .scale(if (expanded) 0.9f else 1f)
@@ -47,7 +48,6 @@ fun AnimatedFAB(
             Icon(Icons.Default.Add, contentDescription = "Abrir menú", tint = Color.White)
         }
 
-        // Sub-botones animados
         AnimatedVisibility(
             visible = expanded,
             enter = fadeIn() + slideInVertically { it },
@@ -59,7 +59,6 @@ fun AnimatedFAB(
                     .offset(y = (-70).dp),
                 horizontalAlignment = Alignment.End
             ) {
-                // Añadir cuenta
                 IconButton(
                     onClick = {
                         expanded = false
@@ -67,12 +66,11 @@ fun AnimatedFAB(
                     },
                     modifier = Modifier
                         .size(48.dp)
-                        .background(Color.Black.copy(alpha = 0.7f), CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Añadir cuenta", tint = GlowCyan)
+                    Icon(Icons.Default.Add, contentDescription = "Añadir cuenta", tint = MaterialTheme.colorScheme.primary)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                // Refrescar
                 IconButton(
                     onClick = {
                         expanded = false
@@ -80,9 +78,9 @@ fun AnimatedFAB(
                     },
                     modifier = Modifier
                         .size(48.dp)
-                        .background(Color.Black.copy(alpha = 0.7f), CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refrescar", tint = GlowCyan)
+                    Icon(Icons.Default.Refresh, contentDescription = "Refrescar", tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
