@@ -14,16 +14,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.ViewModelProvider
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
-import com.l2wifi.data.local.datastore.SettingsDataStore
 import com.l2wifi.ui.MainScreen
 import com.l2wifi.ui.theme.L2WiFiTheme
 import com.l2wifi.ui.theme.ThemeViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
-@AndroidEntryPoint  // ← ESTO ES LO QUE FALTABA
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -51,16 +50,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         checkAndRequestCallPermission()
 
-        val dataStore = SettingsDataStore(applicationContext)
-        val themeViewModel = ViewModelProvider(
-            this,
-            ThemeViewModel.Factory(dataStore)
-        ).get(ThemeViewModel::class.java)
-
         setContent {
-            val themeModeState = themeViewModel.themeMode.collectAsStateWithLifecycle()
-            val themeMode = themeModeState.value
-            L2WiFiDynamicTheme(themeMode = themeMode) {
+            // ThemeViewModel se inyecta automáticamente por Hilt en el Composable
+            L2WiFiDynamicTheme {
                 val navController = rememberNavController()
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -75,9 +67,12 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun L2WiFiDynamicTheme(
-    themeMode: Int,
     content: @Composable () -> Unit
 ) {
+    val themeViewModel: ThemeViewModel = hiltViewModel()
+    val themeModeState = themeViewModel.themeMode.collectAsStateWithLifecycle()
+    val themeMode = themeModeState.value
+    
     val context = androidx.compose.ui.platform.LocalContext.current
     val isSystemDark = when (themeMode) {
         1 -> false
