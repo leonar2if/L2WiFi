@@ -85,7 +85,7 @@ fun SettingsScreen(
                     else -> FakeSettingRow(item)
                 }
                 if (index < options.lastIndex) {
-                    HorizontalDivider(
+                    Divider(   // <--- Cambiado de HorizontalDivider a Divider
                         modifier = Modifier.padding(horizontal = 20.dp),
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f),
                         thickness = 1.dp
