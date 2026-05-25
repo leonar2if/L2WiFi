@@ -40,8 +40,7 @@ fun PantallaBillete() {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Esta funcionalidad estará disponible próximamente.
-Puedes recargar desde el portal Nauta o con código USSD.",
+                    text = "Esta funcionalidad estará disponible próximamente.\nPuedes recargar desde el portal Nauta o con código USSD.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
