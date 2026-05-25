@@ -1,0 +1,261 @@
+name: Auto Fix L2WiFi Files
+
+on:
+  workflow_dispatch:   # Permite ejecutarlo manualmente desde la pestaña Actions
+
+jobs:
+  fix-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Corregir MainActivity.kt (añadir @AndroidEntryPoint)
+        run: |
+          cat > app/src/main/java/com/l2wifi/MainActivity.kt << 'EOF'
+          package com.l2wifi
+
+          import android.Manifest
+          import android.content.pm.PackageManager
+          import android.os.Bundle
+          import android.widget.Toast
+          import androidx.activity.ComponentActivity
+          import androidx.activity.compose.setContent
+          androidx.activity.result.contract.ActivityResultContracts
+          import androidx.compose.foundation.layout.fillMaxSize
+          import androidx.compose.material3.MaterialTheme
+          import androidx.compose.material3.Surface
+          import androidx.compose.runtime.Composable
+          import androidx.compose.runtime.getValue
+          import androidx.compose.ui.Modifier
+          import androidx.core.content.ContextCompat
+          import androidx.lifecycle.ViewModelProvider
+          import androidx.lifecycle.compose.collectAsStateWithLifecycle
+          import androidx.navigation.compose.rememberNavController
+          import com.l2wifi.data.local.datastore.SettingsDataStore
+          import com.l2wifi.ui.MainScreen
+          import com.l2wifi.ui.theme.L2WiFiTheme
+          import com.l2wifi.ui.theme.ThemeViewModel
+          import dagger.hilt.android.AndroidEntryPoint
+
+          @AndroidEntryPoint
+          class MainActivity : ComponentActivity() {
+
+              private val requestPermissionLauncher = registerForActivityResult(
+                  ActivityResultContracts.RequestPermission()
+              ) { isGranted ->
+                  if (isGranted) {
+                      Toast.makeText(this, "Permiso de llamada concedido", Toast.LENGTH_SHORT).show()
+                  } else {
+                      Toast.makeText(this, "El permiso de llamada es necesario para recargas", Toast.LENGTH_LONG).show()
+                  }
+              }
+
+              private fun checkAndRequestCallPermission() {
+                  when {
+                      ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED -> {}
+                      else -> requestPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
+                  }
+              }
+
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  checkAndRequestCallPermission()
+
+                  val dataStore = SettingsDataStore(applicationContext)
+                  val themeViewModel = ViewModelProvider(
+                      this,
+                      ThemeViewModel.Factory(dataStore)
+                  ).get(ThemeViewModel::class.java)
+
+                  setContent {
+                      val themeModeState = themeViewModel.themeMode.collectAsStateWithLifecycle()
+                      val themeMode = themeModeState.value
+                      L2WiFiDynamicTheme(themeMode = themeMode) {
+                          val navController = rememberNavController()
+                          Surface(
+                              modifier = Modifier.fillMaxSize(),
+                              color = MaterialTheme.colorScheme.background
+                          ) {
+                              MainScreen(navController = navController)
+                          }
+                      }
+                  }
+              }
+          }
+
+          @Composable
+          fun L2WiFiDynamicTheme(themeMode: Int, content: @Composable () -> Unit) {
+              val context = androidx.compose.ui.platform.LocalContext.current
+              val isSystemDark = when (themeMode) {
+                  1 -> false
+                  2 -> true
+                  else -> context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK == android.content.res.Configuration.UI_MODE_NIGHT_YES
+              }
+              L2WiFiTheme(darkTheme = isSystemDark, content = content)
+          }
+          EOF
+
+      - name: Corregir NautaApiService.kt (endpoints correctos)
+        run: |
+          mkdir -p app/src/main/java/com/l2wifi/data/remote/api
+          cat > app/src/main/java/com/l2wifi/data/remote/api/NautaApiService.kt << 'EOF'
+          package com.l2wifi.data.remote.api
+
+          import retrofit2.http.*
+          import com.l2wifi.data.remote.model.*
+
+          interface NautaApiService {
+              @FormUrlEncoded
+              @POST("Loginservlt")
+              suspend fun login(
+                  @Field("username") username: String,
+                  @Field("password") password: String,
+                  @Field("wlanuserip") wlanUserIp: String? = null
+              ): retrofit2.Response<LoginResponse>
+
+              @GET("LogoutServlet")
+              suspend fun logout(): retrofit2.Response<LogoutResponse>
+
+              @GET("EtecsaQueryServlet")
+              suspend fun getSessionInfo(): retrofit2.Response<SessionInfoResponse>
+          }
+          EOF
+
+      - name: Crear LoginResponse.kt
+        run: |
+          mkdir -p app/src/main/java/com/l2wifi/data/remote/model
+          cat > app/src/main/java/com/l2wifi/data/remote/model/LoginResponse.kt << 'EOF'
+          package com.l2wifi.data.remote.model
+
+          data class LoginResponse(
+              val success: Boolean = false,
+              val message: String? = null,
+              val sessionId: String? = null,
+              val remainingTime: Long? = null,
+              val credit: Double? = null
+          )
+          EOF
+
+      - name: Crear SessionInfoResponse.kt
+        run: |
+          cat > app/src/main/java/com/l2wifi/data/remote/model/SessionInfoResponse.kt << 'EOF'
+          package com.l2wifi.data.remote.model
+
+          data class SessionInfoResponse(
+              val active: Boolean = false,
+              val remainingTime: Long = 0,
+              val credit: Double = 0.0,
+              val username: String = ""
+          )
+          EOF
+
+      - name: Crear LogoutResponse.kt
+        run: |
+          cat > app/src/main/java/com/l2wifi/data/remote/model/LogoutResponse.kt << 'EOF'
+          package com.l2wifi.data.remote.model
+
+          data class LogoutResponse(
+              val success: Boolean = false,
+              val message: String? = null
+          )
+          EOF
+
+      - name: Corregir ConnectionRepositoryImpl.kt
+        run: |
+          cat > app/src/main/java/com/l2wifi/data/repository/ConnectionRepositoryImpl.kt << 'EOF'
+          package com.l2wifi.data.repository
+
+          import com.l2wifi.data.local.dao.ActiveSessionDao
+          import com.l2wifi.data.local.entity.ActiveSessionEntity
+          import com.l2wifi.data.remote.api.NautaApiService
+          import com.l2wifi.domain.model.Account
+          import com.l2wifi.domain.model.Balance
+          import com.l2wifi.domain.model.ConnectionState
+          import com.l2wifi.domain.repository.AccountRepository
+          import com.l2wifi.domain.repository.ConnectionRepository
+          import kotlinx.coroutines.Dispatchers
+          import kotlinx.coroutines.flow.Flow
+          import kotlinx.coroutines.flow.flow
+          import kotlinx.coroutines.flow.flowOn
+          import kotlinx.coroutines.flow.mapLatest
+          import java.io.IOException
+          import javax.inject.Inject
+
+          class ConnectionRepositoryImpl @Inject constructor(
+              private val nautaApi: NautaApiService,
+              private val activeSessionDao: ActiveSessionDao,
+              private val accountRepository: AccountRepository
+          ) : ConnectionRepository {
+
+              override fun getActiveAccount(): Flow<Account?> =
+                  activeSessionDao.getActiveFlow().mapLatest { session ->
+                      session?.accountId?.let { accountRepository.getAccountById(it) }
+                  }.flowOn(Dispatchers.IO)
+
+              override suspend fun connect(account: Account): Flow<Result<Unit>> = flow {
+                  try {
+                      val response = nautaApi.login(account.username, account.password, null)
+                      
+                      if (response.isSuccessful && response.body()?.success == true) {
+                          activeSessionDao.insert(ActiveSessionEntity(accountId = account.id))
+                          accountRepository.updateAccount(account.copy(state = ConnectionState.ACTIVE))
+                          emit(Result.success(Unit))
+                      } else {
+                          val errorMsg = response.body()?.message ?: "Credenciales incorrectas"
+                          emit(Result.failure(Exception(errorMsg)))
+                      }
+                  } catch (e: IOException) {
+                      emit(Result.failure(Exception("Error de red: ${e.message}")))
+                  } catch (e: Exception) {
+                      emit(Result.failure(e))
+                  }
+              }.flowOn(Dispatchers.IO)
+
+              override suspend fun disconnect() {
+                  try {
+                      val logoutResponse = nautaApi.logout()
+                      if (logoutResponse.isSuccessful && logoutResponse.body()?.success == true) {
+                          val session = activeSessionDao.getActive()
+                          session?.let {
+                              val activeAccount = accountRepository.getAccountById(it.accountId)
+                              activeAccount?.let { acc ->
+                                  accountRepository.updateAccount(acc.copy(state = ConnectionState.INACTIVE))
+                              }
+                              activeSessionDao.deleteAll()
+                          }
+                      } else {
+                          activeSessionDao.deleteAll()
+                      }
+                  } catch (e: Exception) {
+                      activeSessionDao.deleteAll()
+                  }
+              }
+
+              override suspend fun getBalance(account: Account): Balance? {
+                  return try {
+                      val response = nautaApi.getSessionInfo()
+                      if (response.isSuccessful && response.body() != null) {
+                          val info = response.body()!!
+                          Balance(
+                              remainingTime = info.remainingTime,
+                              remainingMoney = info.credit,
+                              currency = "CUP"
+                          )
+                      } else {
+                          null
+                      }
+                  } catch (e: Exception) {
+                      null
+                  }
+              }
+          }
+          EOF
+
+      - name: Commit y push de los cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Auto-fix: Agregado @AndroidEntryPoint y endpoints correctos de Nauta" || echo "No hay cambios para commit"
+          git push
