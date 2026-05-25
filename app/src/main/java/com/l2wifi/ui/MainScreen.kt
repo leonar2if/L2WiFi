@@ -24,7 +24,7 @@ import com.l2wifi.ui.screens.splash.SplashScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(navController: NavHostController) {  // ← Cambiado a NavHostController
+fun MainScreen(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     
