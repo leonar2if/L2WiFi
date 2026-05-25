@@ -1,67 +1,67 @@
 package com.l2wifi.ui.components
 
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PremiumButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    gradient: Brush? = null
+fun PremiumTopBar(
+    title: String,
+    onSettingsClick: () -> Unit = {},
+    onAboutClick: () -> Unit = {},
+    onNautaClick: () -> Unit = {}
 ) {
-    var buttonScale by remember { mutableStateOf(1f) }
-    val scaleAnim by animateFloatAsState(
-        targetValue = buttonScale,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "buttonScale"
-    )
-    val fill = gradient ?: Brush.horizontalGradient(
-        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
-    )
+    var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
-    Button(
-        onClick = {
-            buttonScale = 0.95f
-            onClick()
-            buttonScale = 1f
+    TopAppBar(
+        title = { Text(title, color = MaterialTheme.colorScheme.onSurface) },
+        actions = {
+            IconButton(onClick = {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.nauta.cu"))
+                context.startActivity(intent)
+                onNautaClick()
+            }) {
+                Icon(Icons.Default.Person, contentDescription = "Nauta", tint = Color.White)
+            }
+            IconButton(onClick = { expanded = true }) {
+                Icon(Icons.Default.MoreVert, contentDescription = "Menú", tint = MaterialTheme.colorScheme.onSurface)
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Ajustes") },
+                    onClick = { expanded = false; onSettingsClick() }
+                )
+                DropdownMenuItem(
+                    text = { Text("Acerca de") },
+                    onClick = { expanded = false; onAboutClick() }
+                )
+            }
         },
-        enabled = enabled,
-        modifier = modifier
-            .scale(scaleAnim)
-            .clip(RoundedCornerShape(30.dp)),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color.Transparent,
-            contentColor = Color.White
-        ),
-        shape = RoundedCornerShape(30.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(fill, shape = RoundedCornerShape(30.dp))
-                .padding(horizontal = 24.dp, vertical = 12.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = text, color = Color.White)
-        }
-    }
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    )
 }
