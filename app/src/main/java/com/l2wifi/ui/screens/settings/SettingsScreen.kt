@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.compose.ui.graphics.Color
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.l2wifi.ui.theme.ThemeViewModel
 
@@ -19,7 +19,7 @@ import com.l2wifi.ui.theme.ThemeViewModel
 @Composable
 fun SettingsScreen(
     navController: NavController,
-    themeViewModel: ThemeViewModel = viewModel()
+    themeViewModel: ThemeViewModel = hiltViewModel()
 ) {
     val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
 
