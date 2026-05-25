@@ -1,15 +1,17 @@
 package com.l2wifi.ui.theme
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.l2wifi.data.local.datastore.SettingsDataStore
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ThemeViewModel(
+@HiltViewModel
+class ThemeViewModel @Inject constructor(
     private val dataStore: SettingsDataStore
 ) : ViewModel() {
 
@@ -28,16 +30,6 @@ class ThemeViewModel(
         viewModelScope.launch {
             dataStore.saveThemeMode(mode)
             _themeMode.value = mode
-        }
-    }
-
-    class Factory(private val dataStore: SettingsDataStore) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(ThemeViewModel::class.java)) {
-                return ThemeViewModel(dataStore) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
         }
     }
 }
