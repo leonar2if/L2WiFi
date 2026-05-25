@@ -16,8 +16,7 @@ fun PantallaCasa() {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Pantalla Casa
-(en desarrollo)",
+            text = "Pantalla Casa\n(en desarrollo)",
             fontSize = 20.sp,
             color = MaterialTheme.colorScheme.onBackground
         )
