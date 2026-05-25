@@ -1,5 +1,9 @@
 package com.l2wifi.data.repository
 
+import android.content.Context
+import android.net.wifi.WifiManager
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.l2wifi.data.local.dao.ActiveSessionDao
 import com.l2wifi.data.local.entity.ActiveSessionEntity
 import com.l2wifi.data.remote.api.NautaApiService
@@ -8,19 +12,25 @@ import com.l2wifi.domain.model.Balance
 import com.l2wifi.domain.model.ConnectionState
 import com.l2wifi.domain.repository.AccountRepository
 import com.l2wifi.domain.repository.ConnectionRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
 import java.io.IOException
+import java.net.InetAddress
+import java.net.NetworkInterface
 import javax.inject.Inject
 
 class ConnectionRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val nautaApi: NautaApiService,
     private val activeSessionDao: ActiveSessionDao,
     private val accountRepository: AccountRepository
 ) : ConnectionRepository {
+
+    private val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
     override fun getActiveAccount(): Flow<Account?> =
         activeSessionDao.getActiveFlow().mapLatest { session ->
@@ -29,22 +39,33 @@ class ConnectionRepositoryImpl @Inject constructor(
 
     override suspend fun connect(account: Account): Flow<Result<Unit>> = flow {
         try {
-            // Obtener la IP del usuario (para Nauta a veces es necesaria)
-            val userIp = getLocalIpAddress()
+            // Validar credenciales no estén vacías
+            if (account.username.isEmpty() || account.password.isEmpty()) {
+                emit(Result.failure(Exception("Usuario y contraseña son requeridos")))
+                return@flow
+            }
+
+            // Obtener la IP local para el portal de autenticación
+            val userIp = getLocalIpAddress() ?: "0.0.0.0"
+            
+            // Intentar conectar con la API de Nauta
             val response = nautaApi.login(account.username, account.password, userIp)
+            
             if (response.isSuccessful && response.body()?.success == true) {
                 // Guardar sesión activa localmente
+                activeSessionDao.deleteAll() // Limpiar sesiones anteriores
                 activeSessionDao.insert(ActiveSessionEntity(accountId = account.id))
                 accountRepository.updateAccount(account.copy(state = ConnectionState.ACTIVE))
                 emit(Result.success(Unit))
             } else {
-                val errorMsg = response.body()?.message ?: "Credenciales incorrectas"
+                val errorMsg = response.body()?.message 
+                    ?: "Credenciales incorrectas o servidor no disponible"
                 emit(Result.failure(Exception(errorMsg)))
             }
         } catch (e: IOException) {
-            emit(Result.failure(Exception("Error de red: ${e.message}")))
+            emit(Result.failure(Exception("Error de red: Verifica tu conexión a Internet. ${e.message}")))
         } catch (e: Exception) {
-            emit(Result.failure(e))
+            emit(Result.failure(Exception("Error al conectar: ${e.localizedMessage}")))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -59,11 +80,11 @@ class ConnectionRepositoryImpl @Inject constructor(
                     activeAccount?.let { acc ->
                         accountRepository.updateAccount(acc.copy(state = ConnectionState.INACTIVE))
                     }
-                    activeSessionDao.deleteAll()
                 }
             }
         } catch (e: Exception) {
             // Si falla el logout remoto, igual limpiamos local
+        } finally {
             activeSessionDao.deleteAll()
         }
     }
@@ -76,7 +97,7 @@ class ConnectionRepositoryImpl @Inject constructor(
                 Balance(
                     remainingTime = balance.remainingTime ?: 0,
                     remainingMoney = balance.credit ?: 0.0,
-                    currency = "CUP"  // o "CUC" según respuesta
+                    currency = "CUP"
                 )
             } else {
                 null
@@ -87,8 +108,25 @@ class ConnectionRepositoryImpl @Inject constructor(
     }
 
     private fun getLocalIpAddress(): String? {
-        // Implementación simple para obtener IP local (usada en el portal)
-        // En producción se puede obtener de NetworkInterface
-        return null
+        return try {
+            val interfaces = NetworkInterface.getNetworkInterfaces()
+            for (networkInterface in interfaces) {
+                if (!networkInterface.isUp) continue
+                if (networkInterface.isLoopback) continue
+                
+                val addresses = networkInterface.inetAddresses
+                for (address in addresses) {
+                    if (address is InetAddress && !address.isLoopbackAddress) {
+                        val ip = address.hostAddress
+                        if (ip != null && !ip.contains(":")) { // Excluir IPv6
+                            return ip
+                        }
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            null
+        }
     }
 }
