@@ -68,8 +68,7 @@ fun AboutScreen(navController: NavController) {
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Esta aplicación está en fase de desarrollo.
-Próximamente más funcionalidades.",
+                        text = "Esta aplicación está en fase de desarrollo.\nPróximamente más funcionalidades.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
                     )
